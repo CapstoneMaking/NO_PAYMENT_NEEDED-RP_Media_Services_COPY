@@ -435,28 +435,28 @@ const UserDashboard = () => {
   return (
     <>
       <nav>
-        <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
-          <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></a></li>
-          <li><Link to="/home">Home</Link></li>
-          <li><Link to="/rent-schedule">Schedule</Link></li>
-          <li><Link to="/packages">Packages</Link></li>
-          <li><Link to="/services">Services</Link></li>
-          <li><Link to="/photobooth">Photobooth</Link></li>
-          <li><Link to="/about">About us</Link></li>
-          <li><a href="/userDashboard">User Dashboard</a></li>
-        </ul>
-        <ul>
-          <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
-          <li className="hideOnMobile"><Link to="/home">Home</Link></li>
-          <li className="hideOnMobile"><Link to="/rent-schedule">Schedule</Link></li>
-          <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
-          <li className="hideOnMobile"><Link to="/services">Services</Link></li>
-          <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
-          <li className="hideOnMobile"><Link to="/about">About Us</Link></li>
-          <li className="hideOnMobile"><a href="/userDashboard">User Dashboard</a></li>
-          <li className="menu-button" onClick={showSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"/></svg></a></li>
-        </ul>
-      </nav>
+            <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
+              <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></a></li>
+              <li><Link to="/home">Home</Link></li>
+              <li><Link to="/rent-schedule">Schedule</Link></li>
+              <li><Link to="/packages">Packages</Link></li>
+              <li><Link to="/services">Services</Link></li>
+              <li><Link to="/photobooth">Photobooth</Link></li>
+              <li><Link to="/about">About us</Link></li>
+              <li><a href="/adminDashboard">Admin Dashboard</a></li>
+            </ul>
+            <ul>
+              <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
+              <li className="hideOnMobile"><Link to="/home">Home</Link></li>
+              <li className="hideOnMobile"><Link to="/rent-schedule">Schedule</Link></li>
+              <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
+              <li className="hideOnMobile"><Link to="/services">Services</Link></li>
+              <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
+              <li className="hideOnMobile"><Link to="/about">About Us</Link></li>
+              <li className="hideOnMobile"><a href="/adminDashboard">Admin Dashboard</a></li>
+              <li className="menu-button" onClick={showSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"/></svg></a></li>
+            </ul>
+          </nav>
 
       <div className="dashboard">
         <div className="dashboard-header">
