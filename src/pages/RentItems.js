@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { firebaseService } from '../services/firebaseService';
+
 const showMessage = (message, type = 'info') => {
   // Create a simple div for the message
   const messageDiv = document.createElement('div');
@@ -50,6 +51,7 @@ const showMessage = (message, type = 'info') => {
     }
   };
 };
+
 const RentItems = () => {
   const [cart, setCart] = useState({});
   const [total, setTotal] = useState(0);
@@ -62,6 +64,7 @@ const RentItems = () => {
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const { user, isVerified, isAdmin } = useAuth();
+  const isLoadingRef = useRef(false); // Add this to prevent duplicate loads
   
   const showSidebar = () => {
     setSidebarVisible(true);
@@ -72,21 +75,42 @@ const RentItems = () => {
   };
   const categoryRefs = useRef({});
 
-  // Load all items directly from Firebase (both collections)
+  // Load all items directly from Firebase (both collections) - WITH DEDUPLICATION
   const loadAllItems = async () => {
+    // Prevent concurrent loads
+    if (isLoadingRef.current) {
+      console.log('⏳ Load already in progress, skipping...');
+      return;
+    }
+    
+    isLoadingRef.current = true;
     setLoading(true);
     try {
       console.log('🔄 Loading all items from Firebase...');
 
-      let combinedItems = [];
+      // Use a Map to track unique items by a composite key (id + name)
+      const itemMap = new Map();
 
       // 1. Load PREDEFINED items from system/rentalInventory
       try {
         const rentalResult = await firebaseService.getRentalItems();
-        if (rentalResult.success) {
-          console.log('✅ Predefined items:', rentalResult.rentalItems);
-          combinedItems = [...rentalResult.rentalItems];
-          console.log('✅ Loaded', rentalResult.rentalItems?.length || 0, 'predefined rental items');
+        if (rentalResult.success && rentalResult.rentalItems) {
+          console.log('✅ Predefined items found:', rentalResult.rentalItems.length);
+          
+          rentalResult.rentalItems.forEach(item => {
+            // Create a unique key using both id and name
+            const uniqueKey = item.id || `predefined-${item.name.toLowerCase().replace(/\s/g, '-')}`;
+            
+            if (!itemMap.has(uniqueKey)) {
+              itemMap.set(uniqueKey, {
+                ...item,
+                _originalSource: 'predefined',
+                _uniqueKey: uniqueKey
+              });
+            } else {
+              console.warn(`⚠️ Duplicate predefined item skipped: ${item.name} (${uniqueKey})`);
+            }
+          });
         } else {
           console.log('ℹ️ No predefined rental items found');
         }
@@ -98,10 +122,21 @@ const RentItems = () => {
       try {
         const inventoryResult = await firebaseService.getInventoryItems();
         if (inventoryResult.success && inventoryResult.inventoryItems.length > 0) {
-          console.log('✅ Inventory items:', inventoryResult.inventoryItems);
-          // Combine with rental items
-          combinedItems = [...combinedItems, ...inventoryResult.inventoryItems];
-          console.log('✅ Loaded', inventoryResult.inventoryItems.length, 'user-added inventory items');
+          console.log('✅ Inventory items found:', inventoryResult.inventoryItems.length);
+          
+          inventoryResult.inventoryItems.forEach(item => {
+            const uniqueKey = item.id || `inventory-${item.name.toLowerCase().replace(/\s/g, '-')}`;
+            
+            if (!itemMap.has(uniqueKey)) {
+              itemMap.set(uniqueKey, {
+                ...item,
+                _originalSource: 'inventory',
+                _uniqueKey: uniqueKey
+              });
+            } else {
+              console.warn(`⚠️ Duplicate inventory item skipped: ${item.name} (${uniqueKey})`);
+            }
+          });
         } else {
           console.log('ℹ️ No inventory items found in inventory/currentInventory');
 
@@ -109,32 +144,52 @@ const RentItems = () => {
           const collectionResult = await firebaseService.getAllInventoryItems();
           if (collectionResult.success && collectionResult.items.length > 0) {
             console.log('✅ Found items in inventoryItems collection:', collectionResult.items.length);
-            combinedItems = [...combinedItems, ...collectionResult.items];
+            
+            collectionResult.items.forEach(item => {
+              const uniqueKey = item.id || `inventoryItem-${item.name.toLowerCase().replace(/\s/g, '-')}`;
+              
+              if (!itemMap.has(uniqueKey)) {
+                itemMap.set(uniqueKey, {
+                  ...item,
+                  _originalSource: 'inventoryItems',
+                  _uniqueKey: uniqueKey
+                });
+              } else {
+                console.warn(`⚠️ Duplicate inventoryItems item skipped: ${item.name}`);
+              }
+            });
           }
         }
       } catch (error) {
         console.error('❌ Error loading inventory items:', error);
       }
 
-      // Ensure all items have required fields
-      const normalizedItems = combinedItems.map(item => ({
-        ...item,
-        id: item.id || `item-${Date.now()}`,
-        name: item.name || 'Unnamed Item',
-        category: item.category || 'uncategorized',
-        price: item.price || 0,
-        availableQuantity: item.availableQuantity || item.quantity || 0,
-        reservedQuantity: item.reservedQuantity || 0,
-        totalQuantity: item.totalQuantity || item.maxQuantity || 1
-      }));
+      // Convert Map to array
+      const uniqueItems = Array.from(itemMap.values());
 
-      console.log('📊 Total items loaded:', normalizedItems.length);
-      console.log('Sample items:', normalizedItems.slice(0, 5).map(item => ({
+      // Ensure all items have required fields
+      const normalizedItems = uniqueItems.map(item => {
+        // Clean up temporary properties before setting state
+        const { _originalSource, _uniqueKey, ...cleanItem } = item;
+        
+        return {
+          ...cleanItem,
+          id: cleanItem.id || `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: cleanItem.name || 'Unnamed Item',
+          category: cleanItem.category || 'uncategorized',
+          price: cleanItem.price || 0,
+          availableQuantity: cleanItem.availableQuantity || cleanItem.quantity || 0,
+          reservedQuantity: cleanItem.reservedQuantity || 0,
+          totalQuantity: cleanItem.totalQuantity || cleanItem.maxQuantity || 1
+        };
+      });
+
+      console.log('📊 Total UNIQUE items loaded:', normalizedItems.length);
+      console.log('Sample unique items:', normalizedItems.slice(0, 5).map(item => ({
         id: item.id,
         name: item.name.substring(0, 30),
         category: item.category,
-        availableQuantity: item.availableQuantity,
-        source: item.isPredefined ? 'predefined' : 'inventory'
+        availableQuantity: item.availableQuantity
       })));
 
       setAllItems(normalizedItems);
@@ -143,6 +198,7 @@ const RentItems = () => {
       console.error('❌ Error loading all items:', error);
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
   };
 
@@ -319,13 +375,17 @@ const RentItems = () => {
     // Subscribe to predefined items changes
     const unsubscribeRentalItems = firebaseService.subscribeToRentalItems((items) => {
       console.log('📡 Predefined items updated:', items?.length || 0);
-      loadAllItems(); // Reload all items when predefined items change
+      if (!isLoadingRef.current) {
+        loadAllItems();
+      }
     });
 
     // Subscribe to inventory items changes
     const unsubscribeInventory = firebaseService.subscribeToInventory((items) => {
       console.log('📡 Inventory items updated:', items?.length || 0);
-      loadAllItems(); // Reload all items when inventory changes
+      if (!isLoadingRef.current) {
+        loadAllItems();
+      }
     });
 
     return () => {
@@ -333,8 +393,6 @@ const RentItems = () => {
       unsubscribeInventory?.();
     };
   }, []);
-
-
 
   // 移除 scrollToCategory 函数，改为直接过滤
   const filterByCategory = (category) => {
@@ -603,7 +661,86 @@ const RentItems = () => {
     );
   };
 
-
+  // If loading, show loading indicator
+  if (loading) {
+    return (
+      <>
+        <nav>
+          <ul className={`sidebar ${sidebarVisible ? 'active' : ''}`}>
+            <li onClick={hideSidebar}><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" /></svg></a></li>
+            <li><Link to="/home" onClick={hideSidebar}>Home</Link></li>
+            <li><Link to="/rent-schedule" onClick={hideSidebar}>Schedule</Link></li>
+            <li><Link to="/packages" onClick={hideSidebar}>Packages</Link></li>
+            <li><Link to="/services" onClick={hideSidebar}>Services</Link></li>
+            <li><Link to="/photobooth" onClick={hideSidebar}>Photobooth</Link></li>
+            <li><Link to="/about" onClick={hideSidebar}>About us</Link></li>
+            {user ? (
+              isAdmin ? (
+                <li><Link to="/AdminDashboard" onClick={hideSidebar}>Admin Dashboard</Link></li>
+              ) : (
+                <li><Link to="/UserDashboard" onClick={hideSidebar}>My Dashboard</Link></li>
+              )
+            ) : (
+              <li><Link to="/login-register" onClick={hideSidebar}>Login</Link></li>
+            )}
+          </ul>
+          <ul>
+            <li className="hideOnMobile"><Link to="/home"><img src="/assets/logoNew - Copy.png" width="200px" height="150px" alt="Logo" /></Link></li>
+            <li className="hideOnMobile"><Link to="/home">Home</Link></li>
+            <li className="hideOnMobile"><Link to="/rent-schedule">Schedule</Link></li>
+            <li className="hideOnMobile"><Link to="/packages">Packages</Link></li>
+            <li className="hideOnMobile"><Link to="/services">Services</Link></li>
+            <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
+            <li className="hideOnMobile"><Link to="/about">About Us</Link></li>
+            {user ? (
+              isAdmin ? (
+                <li className="hideOnMobile">
+                  <Link to="/AdminDashboard" title="Admin Dashboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                      <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+                    </svg>
+                  </Link>
+                </li>
+              ) : (
+                <li className="hideOnMobile">
+                  <Link to="/UserDashboard" title="User Dashboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                      <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+                    </svg>
+                  </Link>
+                </li>
+              )
+            ) : (
+              <li className="hideOnMobile">
+                <Link to="/login-register" title="Login / Register">
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                    <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+                  </svg>
+                </Link>
+              </li>
+            )}
+            <li className="menu-button" onClick={showSidebar}>
+              <a href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f">
+                  <path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z" />
+                </svg>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <p>Loading items...</p>
+        </div>
+        <footer className="footer">
+          <div className="copyright">
+            <div className="column ss-copyright">
+              <span>&copy; 2025 RP Media Services. All rights reserved</span>
+            </div>
+          </div>
+        </footer>
+      </>
+    );
+  }
 
   return (
     <>
@@ -682,7 +819,6 @@ const RentItems = () => {
         <h1 className='rent-title'>Rent Items</h1>
         <p>Quality Gear You Can Trust, Ready When You Are</p>
       </section>
-
 
       <section className="rent-wrapper">
         <div className="top-bar">
