@@ -4,6 +4,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../utils/firebase';
 import { useAuth } from '../context/AuthContext';
+
 const showMessage = (message, type = 'info') => {
   // Create a simple div for the message
   const messageDiv = document.createElement('div');
@@ -52,6 +53,7 @@ const showMessage = (message, type = 'info') => {
     }
   };
 };
+
 const RentSchedule = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -265,34 +267,10 @@ const RentSchedule = () => {
     }
   };
 
-  // Check if we have valid booking data (either items or package)
-  useEffect(() => {
-    const items = JSON.parse(localStorage.getItem("selectedItems")) || [];
-    const pkg = JSON.parse(localStorage.getItem("selectedPackage"));
-
-    console.log('RentSchedule - Current selection:', {
-      items: items.length,
-      package: pkg ? pkg.name : 'none'
-    });
-
-    if (items.length === 0 && !pkg) {
-      setMessage("No items or package selected. Please go back and make a selection.");
-    }
-  }, []);
-
-  // Handle next button click
+  // Handle next button click - UPDATED to not require items
   const handleNext = async () => {
     if (!authUser) {
       setMessage("You must log in before making a booking.");
-      return;
-    }
-
-    // Validate we have either items or package
-    const items = JSON.parse(localStorage.getItem("selectedItems")) || [];
-    const pkg = JSON.parse(localStorage.getItem("selectedPackage"));
-
-    if (items.length === 0 && !pkg) {
-      setMessage("Please select items or a package before scheduling.");
       return;
     }
 
@@ -325,14 +303,13 @@ const RentSchedule = () => {
       }
     }
 
-    // Save to localStorage and proceed
+    // Save dates to localStorage and proceed to items page
     localStorage.setItem("bookingFormData", JSON.stringify({ startDate, endDate }));
 
     // Log what we're saving
     console.log('Saving booking data:', { startDate, endDate });
-    console.log('Current items:', items.length);
-    console.log('Current package:', pkg);
 
+    // Navigate to items page - user will select items there
     navigate("/rent-items");
   };
 
@@ -416,10 +393,6 @@ const RentSchedule = () => {
   const rentalDays = startDate && endDate
     ? Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1
     : 0;
-
-  const items = JSON.parse(localStorage.getItem("selectedItems")) || [];
-  const pkg = JSON.parse(localStorage.getItem("selectedPackage"));
-  const hasSelection = items.length > 0 || pkg;
 
   return (
     <>
@@ -562,9 +535,9 @@ const RentSchedule = () => {
         <div className="schedule-action-section">
           <div className="schedule-action-buttons">
             <button
-              className={`schedule-nextbtn ${!startDate || !endDate || !hasSelection ? 'schedule-disabled' : ''}`}
+              className={`schedule-nextbtn ${!startDate || !endDate ? 'schedule-disabled' : ''}`}
               onClick={handleNext}
-              disabled={!startDate || !endDate || !hasSelection}
+              disabled={!startDate || !endDate}
             >
               Continue to Items
             </button>
