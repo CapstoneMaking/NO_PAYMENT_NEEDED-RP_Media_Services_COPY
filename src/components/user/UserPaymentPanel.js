@@ -20,7 +20,7 @@ const UserPaymentPanel = () => {
   const [loadingPayPal, setLoadingPayPal] = useState(false);
   const paypalButtonsRef = useRef(null);
 
-  const PAYPAL_CLIENT_ID = 'AWGFDUQj2yRhffy0Q1YjmH_dzkhxVQ5QrlYe9Czz-AqhklZEg7PkxKhINSqHv4f23yLnJqYOsIwTcf8u';
+  const PAYPAL_CLIENT_ID = 'AcEP961Qbre_kUIPrMEU_uzKEmvXsNJ4SmK6HlltTvT1uPmzFJnjrc0vbYwAstHS9TPEPewVVH6Et7qZ';
 
   useEffect(() => {
     if (showPaymentModal) {
