@@ -1,9 +1,9 @@
-// information.js - UPDATED WITH APPCONTEXT INTEGRATION AND VERIFICATION FIX
-import React, { useCallback, useEffect, useState, useRef } from 'react'; // ADD useRef
+// information.js - UPDATED WITH PROPER BACK NAVIGATION FOR PACKAGE ITEMS & HIDE ADD TO CART
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
-import { firebaseService } from '../services/firebaseService'; // ADD THIS IMPORT
+import { firebaseService } from '../services/firebaseService';
 
 const showMessage = (message, type = 'info') => {
   // Create a simple div for the message
@@ -60,11 +60,13 @@ const Information = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [productImages, setProductImages] = useState([]);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // ADD loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [returnToPackage, setReturnToPackage] = useState(null);
+  const [isFromPackage, setIsFromPackage] = useState(false); // ✅ NEW: Track if viewing item from package
   const location = useLocation();
   const navigate = useNavigate();
   
-  const { user, isVerified } = useAuth(); // UPDATED: Get isVerified from AuthContext
+  const { user, isVerified } = useAuth();
   const { 
     getAllRentalItems,
     getAvailableForRent,
@@ -179,342 +181,158 @@ const Information = () => {
           console.error('Error loading productInfo:', error);
         }
         
-        // 4. Get predefined product info (from your existing code)
+        // 4. Get predefined product info
         const predefinedProductInfo = {
-      // Individual Products - ONLY DESCRIPTIVE DATA (no prices/stock)
       "sachtler-tripod": {
         title: "Sachtler Video 20 S1 100mm Ball Head Tripod System",
         image: "/assets/items/Sachtler.png",
-        images: [
-          "/assets/items/Sachtler.png",
-          "/assets/items/camera_item/sachtler2.jpg",
-          "/assets/items/camera_item/sachtler3.jpg",  
-        ],
-        description: "Unlock flawless performance and professional stability with the Sachtler Video 20 S1 100mm Ball Head Tripod System. Engineered for filmmakers, videographers, and content creators, this high-end tripod system delivers smooth, precise camera control with a robust 100mm ball head. The Video 20 S1 features a durable, lightweight design, offering excellent load capacity and versatility for even the most demanding shoots. this system ensures steady support and fluid movement, enhancing your creative workflow.",
-        specifications: [
-          "100mm Ball Head System",
-          "Professional Stability",
-          "Smooth Camera Control",
-          "Lightweight Design",
-          "Excellent Load Capacity"
-        ],
+        images: ["/assets/items/Sachtler.png", "/assets/items/camera_item/sachtler2.jpg", "/assets/items/camera_item/sachtler3.jpg"],
+        description: "Unlock flawless performance and professional stability...",
+        specifications: ["100mm Ball Head System", "Professional Stability", "Smooth Camera Control", "Lightweight Design", "Excellent Load Capacity"],
         category: "tripod"
       },
       "cartoni-tripod": {
         title: "Cartoni Laser Z100 Fluid Head Tripod Aluminum 2",
         image: "/assets/items/Cartoni.png",
-        images: [
-          "/assets/items/Cartoni.png",
-          "/assets/items/camera_item/cartoni3.jpg",
-          "/assets/items/camera_item/cartoni2.jpg",  
-        ],
-        description: "Get precision and stability with the Cartoni Laser Z100 Fluid Head Tripod—the perfect solution for your next shoot. Designed for professional filmmakers and videographers, this aluminum tripod system features the Z100 fluid head, offering exceptional fluidity and control for smooth panning and tilting. With an impressive load capacity and durable construction, the Z100 is ideal for supporting a variety of camera setups, from lightweight rigs to heavier professional cameras. Whether you're working on-location or in the studio, this tripod ensures steady and reliable performance.",
-        specifications: [
-          "Z100 Fluid Head",
-          "Aluminum Construction",
-          "Exceptional Fluidity",
-          "Professional Load Capacity",
-          "Studio & Location Ready"
-        ],
+        images: ["/assets/items/Cartoni.png", "/assets/items/camera_item/cartoni3.jpg", "/assets/items/camera_item/cartoni2.jpg"],
+        description: "Get precision and stability with the Cartoni Laser Z100 Fluid Head Tripod...",
+        specifications: ["Z100 Fluid Head", "Aluminum Construction", "Exceptional Fluidity", "Professional Load Capacity", "Studio & Location Ready"],
         category: "tripod"
       },
       "eimage-tripod": {
         title: "E-Image 2-Stage Aluminum Tripod with GH15 Head",
         image: "/assets/items/E-imageTripod.jpg",
-        images: [
-          "/assets/items/E-imageTripod.jpg",
-          "/assets/items/camera_item/e-image2.jpg",
-          "/assets/items/camera_item/e-image3.jpg",  
-        ],
-        description: "Experience professional stability and versatility with the E-Image 2-Stage Aluminum Tripod featuring the GH15 Fluid Head. Designed for videographers and filmmakers, this robust tripod system offers smooth panning and tilting capabilities with its advanced fluid head technology. The two-stage aluminum legs provide quick height adjustments and excellent stability on various surfaces. Perfect for both studio and location shoots, this tripod ensures reliable performance for your camera equipment.",
-        specifications: [
-          "2-Stage Aluminum Legs",
-          "GH15 Fluid Head",
-          "Quick Height Adjustment",
-          "Various Surface Stability",
-          "Professional Performance"
-        ],
+        images: ["/assets/items/E-imageTripod.jpg", "/assets/items/camera_item/e-image2.jpg", "/assets/items/camera_item/e-image3.jpg"],
+        description: "Experience professional stability and versatility with the E-Image 2-Stage Aluminum Tripod...",
+        specifications: ["2-Stage Aluminum Legs", "GH15 Fluid Head", "Quick Height Adjustment", "Various Surface Stability", "Professional Performance"],
         category: "tripod"
       },
       "pmw-200": {
         title: "Sony PMW-200 Camera",
         image: "/assets/items/pmw.png",
-        images: [
-          "/assets/items/pmw.png",
-          "/assets/items/camera_item/PMW2.jpg",
-          "/assets/items/camera_item/PMW3.jpg",  
-        ],
-        description: "The Sony PMW-200 is a professional handheld flash memory camcorder that delivers exceptional image quality and versatility. Featuring three 1/3-type Exmor CMOS sensors and 10-bit 4:2:2 HD recording, this camera produces broadcast-quality footage with excellent low-light performance. With its compact design and comprehensive professional features, the PMW-200 is ideal for news gathering, documentary production, and event coverage.",
-        specifications: [
-          "Three 1/3-type Exmor CMOS Sensors",
-          "10-bit 4:2:2 HD Recording",
-          "Broadcast-Quality Footage",
-          "Excellent Low-Light Performance",
-          "Compact Design"
-        ],
+        images: ["/assets/items/pmw.png", "/assets/items/camera_item/PMW2.jpg", "/assets/items/camera_item/PMW3.jpg"],
+        description: "The Sony PMW-200 is a professional handheld flash memory camcorder...",
+        specifications: ["Three 1/3-type Exmor CMOS Sensors", "10-bit 4:2:2 HD Recording", "Broadcast-Quality Footage", "Excellent Low-Light Performance", "Compact Design"],
         category: "camera"
       },
       "sony-pmw-350k": {
         title: "Sony PMW-350K Camera",
         image: "/assets/items/sony.png",
-        images: [
-          "/assets/items/sony.png",
-          "/assets/items/camera_item/sony2.jpg",
-          "/assets/items/camera_item/sony3.jpg",  
-        ],
-        description: "The Sony PMW-350K is a high-performance XDCAM EX camcorder designed for professional broadcast and production applications. Equipped with three 2/3-inch type Exmor CMOS sensors and 10-bit 4:2:2 HD recording capability, it delivers superior image quality with excellent color reproduction and dynamic range. This camera system offers exceptional flexibility for various shooting scenarios from studio production to field acquisition.",
-        specifications: [
-          "Three 2/3-inch Exmor CMOS Sensors",
-          "10-bit 4:2:2 HD Recording",
-          "Superior Image Quality",
-          "Exceptional Color Reproduction",
-          "Professional Broadcast Ready"
-        ],
+        images: ["/assets/items/sony.png", "/assets/items/camera_item/sony2.jpg", "/assets/items/camera_item/sony3.jpg"],
+        description: "The Sony PMW-350K is a high-performance XDCAM EX camcorder...",
+        specifications: ["Three 2/3-inch Exmor CMOS Sensors", "10-bit 4:2:2 HD Recording", "Superior Image Quality", "Exceptional Color Reproduction", "Professional Broadcast Ready"],
         category: "camera"
       },
       "panasonic-hpx3100": {
         title: "Panasonic AJ HPX3100 Camera",
         image: "/assets/items/Panasonic.png",
-        images: [
-          "/assets/items/Panasonic.png",
-          "/assets/items/camera_item/panasonic2.jpg",
-          "/assets/items/camera_item/panasonic3.jpg",  
-        ],
-        description: "The Panasonic AJ-HPX3100 is a professional P2 HD camcorder that offers outstanding performance for broadcast and production applications. Featuring three 2/3-inch CCD sensors and AVC-Intra 100/50 recording, this camera delivers exceptional image quality with rich color reproduction and detail. With its robust construction and comprehensive connectivity options, the HPX3100 is perfect for demanding professional environments.",
-        specifications: [
-          "Three 2/3-inch CCD Sensors",
-          "AVC-Intra 100/50 Recording",
-          "Exceptional Image Quality",
-          "Rich Color Reproduction",
-          "Robust Construction"
-        ],
+        images: ["/assets/items/Panasonic.png", "/assets/items/camera_item/panasonic2.jpg", "/assets/items/camera_item/panasonic3.jpg"],
+        description: "The Panasonic AJ-HPX3100 is a professional P2 HD camcorder...",
+        specifications: ["Three 2/3-inch CCD Sensors", "AVC-Intra 100/50 Recording", "Exceptional Image Quality", "Rich Color Reproduction", "Robust Construction"],
         category: "camera"
       },
       "saramonic-comset": {
         title: "Saramonic WiTalk-WT7S 7-Person Full-Duplex Wireless Intercom System",
         image: "/assets/items/Saramonic.png",
-        images: [
-          "/assets/items/Saramonic.png",
-          "/assets/items/camera_item/saramonic2.jpg",
-          "/assets/items/camera_item/saramonic3.jpg",
-          "/assets/items/camera_item/saramonic4.jpg",
-          "/assets/items/camera_item/saramonic5.jpg",  
-        ],
-        description: "The Saramonic WiTalk-WT7S is a comprehensive wireless intercom system designed for film production, live events, and broadcast applications. Operating in the 1.9 GHz DECT frequency band, this system provides crystal-clear full-duplex communication for up to 7 users simultaneously. With its reliable wireless connectivity and professional-grade headsets, it ensures seamless coordination among crew members during productions.",
-        specifications: [
-          "7-Person Full-Duplex",
-          "1.9 GHz DECT Frequency",
-          "Crystal-Clear Communication",
-          "Wireless Connectivity",
-          "Professional-Grade Headsets"
-        ],
+        images: ["/assets/items/Saramonic.png", "/assets/items/camera_item/saramonic2.jpg", "/assets/items/camera_item/saramonic3.jpg", "/assets/items/camera_item/saramonic4.jpg", "/assets/items/camera_item/saramonic5.jpg"],
+        description: "The Saramonic WiTalk-WT7S is a comprehensive wireless intercom system...",
+        specifications: ["7-Person Full-Duplex", "1.9 GHz DECT Frequency", "Crystal-Clear Communication", "Wireless Connectivity", "Professional-Grade Headsets"],
         category: "comset"
       },
       "lumantek-switcher": {
         title: "Lumantek ez-Pro VS10 3G-SDI/HDMI Video Switcher",
         image: "/assets/items/Lumantek.png",
-        images: [
-          "/assets/items/Lumantek.png",
-          "/assets/items/camera_item/Lumantek2.jpg",  
-        ],
-        description: "The Lumantek ez-Pro VS10 is a versatile professional video switcher that supports both 3G-SDI and HDMI inputs. Featuring a 5-inch LED touchscreen for intuitive operation, this compact switcher offers seamless transitions, picture-in-picture capability, and built-in title generator. Ideal for live streaming, broadcast, and multi-camera production setups requiring reliable switching performance.",
-        specifications: [
-          "3G-SDI/HDMI Inputs",
-          "5-inch LED Touchscreen",
-          "Seamless Transitions",
-          "Picture-in-Picture",
-          "Built-in Title Generator"
-        ],
+        images: ["/assets/items/Lumantek.png", "/assets/items/camera_item/Lumantek2.jpg"],
+        description: "The Lumantek ez-Pro VS10 is a versatile professional video switcher...",
+        specifications: ["3G-SDI/HDMI Inputs", "5-inch LED Touchscreen", "Seamless Transitions", "Picture-in-Picture", "Built-in Title Generator"],
         category: "switcher"
       },
       "sony-mcx-500": {
         title: "Sony MCX-500 Switcher",
         image: "/assets/items/sony-switcher.png",
-        images: [
-          "/assets/items/sony-switcher.png",
-          "/assets/items/camera_item/sony-switcher2.jpg",
-          "/assets/items/camera_item/sony-switcher3.jpg",  
-        ],
-        description: "The Sony MCX-500 is a compact live production switcher that brings professional multi-camera production capabilities to a wide range of applications. With 8-input support including HDMI and SDI connections, this switcher offers advanced features like picture-in-picture, chroma key, and built-in streaming capability. Perfect for live events, web streaming, and small studio productions seeking broadcast-quality switching.",
-        specifications: [
-          "8-Input Support",
-          "HDMI and SDI Connections",
-          "Picture-in-Picture",
-          "Chroma Key",
-          "Built-in Streaming"
-        ],
+        images: ["/assets/items/sony-switcher.png", "/assets/items/camera_item/sony-switcher2.jpg", "/assets/items/camera_item/sony-switcher3.jpg"],
+        description: "The Sony MCX-500 is a compact live production switcher...",
+        specifications: ["8-Input Support", "HDMI and SDI Connections", "Picture-in-Picture", "Chroma Key", "Built-in Streaming"],
         category: "switcher"
       },
       "blackmagic-atem": {
         title: "Blackmagic Design ATEM Mini Pro Switcher",
         image: "/assets/items/blackmagic-switcher.jpg",
-        images: [
-          "/assets/items/blackmagic-switcher.jpg",
-        ],
-        description: "The Blackmagic Design ATEM Mini Pro is a professional live production switcher that offers broadcast-quality switching in a compact form factor. Featuring 4 HDMI inputs, built-in streaming capability, and advanced production features like chroma key and DVE effects. Perfect for live streaming, podcast production, and multi-camera setups requiring professional switching capabilities.",
-        specifications: [
-          "4 HDMI Inputs",
-          "Built-in Streaming",
-          "Chroma Key",
-          "DVE Effects",
-          "Compact Design"
-        ],
+        images: ["/assets/items/blackmagic-switcher.jpg"],
+        description: "The Blackmagic Design ATEM Mini Pro is a professional live production switcher...",
+        specifications: ["4 HDMI Inputs", "Built-in Streaming", "Chroma Key", "DVE Effects", "Compact Design"],
         category: "switcher"
       },
       "behringer-mixer": {
         title: "Behringer Xenyx QX602MP3 6-Channel Mixer",
         image: "/assets/items/Behringer.png",
-        images: [
-          "/assets/items/Behringer.png",
-          "/assets/items/camera_item/Behringer2.jpg",
-          "/assets/items/camera_item/Behringer3.jpg",  
-        ],
-        description: "The Behringer Xenyx QX602MP3 is a versatile 6-channel audio mixer designed for musicians, podcasters, and content creators. Featuring high-quality Xenyx mic preamps, built-in digital effects, and USB connectivity for computer recording, this compact mixer offers professional audio performance in an affordable package. The integrated MP3 player input makes it ideal for background music applications.",
-        specifications: [
-          "6-Channel Mixer",
-          "Xenyx Mic Preamps",
-          "Built-in Digital Effects",
-          "USB Connectivity",
-          "MP3 Player Input"
-        ],
+        images: ["/assets/items/Behringer.png", "/assets/items/camera_item/Behringer2.jpg", "/assets/items/camera_item/Behringer3.jpg"],
+        description: "The Behringer Xenyx QX602MP3 is a versatile 6-channel audio mixer...",
+        specifications: ["6-Channel Mixer", "Xenyx Mic Preamps", "Built-in Digital Effects", "USB Connectivity", "MP3 Player Input"],
         category: "audio-mixer"
       },
       "xtuga-mixer": {
         title: "Xtuga E22 USB / XLR Audio Interface",
         image: "/assets/items/XTUGA-E22Mixer.jpg",
-        images: [
-          "/assets/items/XTUGA-E22Mixer.jpg",
-          "/assets/items/camera_item/XTUGA-E22Mixer3.jpg",
-          "/assets/items/camera_item/XTUGA-E22Mixer2.jpg",  
-        ],
-        description: "The Xtuga E22 is a professional USB/XLR audio interface that provides studio-quality recording capabilities for musicians and content creators. With its combination XLR/TRS inputs, phantom power support, and high-resolution audio conversion, this interface delivers clean, professional audio capture for vocals, instruments, and podcasting applications.",
-        specifications: [
-          "USB/XLR Audio Interface",
-          "XLR/TRS Inputs",
-          "Phantom Power Support",
-          "High-Resolution Audio",
-          "Studio Quality"
-        ],
+        images: ["/assets/items/XTUGA-E22Mixer.jpg", "/assets/items/camera_item/XTUGA-E22Mixer3.jpg", "/assets/items/camera_item/XTUGA-E22Mixer2.jpg"],
+        description: "The Xtuga E22 is a professional USB/XLR audio interface...",
+        specifications: ["USB/XLR Audio Interface", "XLR/TRS Inputs", "Phantom Power Support", "High-Resolution Audio", "Studio Quality"],
         category: "audio-mixer"
       },
       "atem-monitor": {
         title: "ATEM156-CO HDMI 15.6\" Video Monitor with Flightcase",
         image: "/assets/items/monitor.png",
-        images: [
-          "/assets/items/monitor.png",
-          "/assets/items/camera_item/monitor1.jpg", 
-        ],
-        description: "The ATEM156-CO is a professional 15.6-inch HDMI video monitor designed for on-set monitoring and production applications. Housed in a durable flight case, this monitor features high-resolution display, multiple input options, and professional monitoring tools. Ideal for camera operators, directors, and production crew requiring accurate video monitoring in various shooting environments.",
-        specifications: [
-          "15.6-inch HDMI Monitor",
-          "Durable Flight Case",
-          "High-Resolution Display",
-          "Multiple Input Options",
-          "Professional Monitoring Tools"
-        ],
+        images: ["/assets/items/monitor.png", "/assets/items/camera_item/monitor1.jpg"],
+        description: "The ATEM156-CO is a professional 15.6-inch HDMI video monitor...",
+        specifications: ["15.6-inch HDMI Monitor", "Durable Flight Case", "High-Resolution Display", "Multiple Input Options", "Professional Monitoring Tools"],
         category: "monitor"
       },
       "lilliput-monitor": {
         title: "Lilliput BM150-4K Carry-On 4K Monitor (V-Mount)",
         image: "/assets/items/LillitputMonitor.png",
-        images: [
-          "/assets/items/LillitputMonitor.png",
-          "/assets/items/camera_item/LillitputMonitor1.jpg",
-          "/assets/items/camera_item/LillitputMonitor2.jpg",  
-        ],
-        description: "The Lilliput BM150-4K is a portable 15-inch 4K monitor designed for professional video production. Featuring V-Mount battery compatibility and ultra-high definition display, this monitor offers excellent color accuracy and brightness for on-location monitoring. Its compact carry-on design makes it perfect for field production where space and power efficiency are crucial.",
-        specifications: [
-          "15-inch 4K Monitor",
-          "V-Mount Battery Compatible",
-          "Ultra HD Display",
-          "Excellent Color Accuracy",
-          "Carry-On Design"
-        ],
+        images: ["/assets/items/LillitputMonitor.png", "/assets/items/camera_item/LillitputMonitor1.jpg", "/assets/items/camera_item/LillitputMonitor2.jpg"],
+        description: "The Lilliput BM150-4K is a portable 15-inch 4K monitor...",
+        specifications: ["15-inch 4K Monitor", "V-Mount Battery Compatible", "Ultra HD Display", "Excellent Color Accuracy", "Carry-On Design"],
         category: "monitor"
       },
       "tvlogic-monitor": {
         title: "TV Logic Multi Format Monitor",
         image: "/assets/items/tvLogicMonitor.png",
-        images: [
-          "/assets/items/tvLogicMonitor.png",
-          "/assets/items/camera_item/tvLogicMonitor1.jpg", 
-        ],
-        description: "The TV Logic multi-format monitor is a professional-grade display solution for broadcast and production environments. Supporting multiple video formats and featuring advanced calibration options, this monitor provides accurate color reproduction and detailed image analysis tools. Essential for color-critical applications and quality control in professional video production.",
-        specifications: [
-          "Multi Format Monitor",
-          "Multiple Video Formats",
-          "Advanced Calibration",
-          "Accurate Color Reproduction",
-          "Image Analysis Tools"
-        ],
+        images: ["/assets/items/tvLogicMonitor.png", "/assets/items/camera_item/tvLogicMonitor1.jpg"],
+        description: "The TV Logic multi-format monitor is a professional-grade display solution...",
+        specifications: ["Multi Format Monitor", "Multiple Video Formats", "Advanced Calibration", "Accurate Color Reproduction", "Image Analysis Tools"],
         category: "monitor"
       },
       "accsoon-transmitter": {
         title: "Accsoon CineView Master 4K",
         image: "/assets/items/Accsoon.png",
-        images: [
-          "/assets/items/Accsoon.png",
-          "/assets/items/camera_item/Accsoon1.jpg",
-          "/assets/items/camera_item/Accsoon2.jpg",  
-        ],
-        description: "The Accsoon CineView Master 4K is a wireless video transmission system that enables real-time 4K video monitoring for film production and live events. With low latency transmission and reliable wireless performance, this system allows directors and crew members to monitor camera feeds wirelessly from various locations on set.",
-        specifications: [
-          "Wireless 4K Transmission",
-          "Real-Time Monitoring",
-          "Low Latency",
-          "Reliable Wireless",
-          "Film Production Ready"
-        ],
+        images: ["/assets/items/Accsoon.png", "/assets/items/camera_item/Accsoon1.jpg", "/assets/items/camera_item/Accsoon2.jpg"],
+        description: "The Accsoon CineView Master 4K is a wireless video transmission system...",
+        specifications: ["Wireless 4K Transmission", "Real-Time Monitoring", "Low Latency", "Reliable Wireless", "Film Production Ready"],
         category: "video-transmitter"
       },
       "hollyland-transmitter": {
         title: "Hollyland Mars 4K Wireless Video Transmitter",
         image: "/assets/items/Hollyland.png",
-        images: [
-          "/assets/items/Hollyland.png",
-          "/assets/items/camera_item/Hollyland.jpg",
-          "/assets/items/camera_item/Hollyland2.jpg",  
-        ],
-        description: "The Hollyland Mars 4K is a professional wireless video transmission system designed for high-quality 4K video monitoring. Featuring long-range transmission capability, low latency, and stable connectivity, this system is ideal for film production, live events, and broadcasting applications where reliable wireless video transmission is essential.",
-        specifications: [
-          "4K Wireless Video Transmitter",
-          "Long-Range Transmission",
-          "Low Latency",
-          "Stable Connectivity",
-          "Professional Grade"
-        ],
+        images: ["/assets/items/Hollyland.png", "/assets/items/camera_item/Hollyland.jpg", "/assets/items/camera_item/Hollyland2.jpg"],
+        description: "The Hollyland Mars 4K is a professional wireless video transmission system...",
+        specifications: ["4K Wireless Video Transmitter", "Long-Range Transmission", "Low Latency", "Stable Connectivity", "Professional Grade"],
         category: "video-transmitter"
       },
       "dolly-platform": {
         title: "Dolly Platform with Tracks",
         image: "/assets/items/DollyPlatformTracks.jpg",
-        images: [
-          "/assets/items/DollyPlatformTracks.jpg",
-        ],
-        description: "Professional camera dolly system with precision tracks for smooth camera movement in film and video production. This robust dolly platform provides stable tracking shots with fluid motion control, essential for creating cinematic sequences and professional camera work in various production scenarios.",
-        specifications: [
-          "Camera Dolly System",
-          "Precision Tracks",
-          "Smooth Camera Movement",
-          "Robust Platform",
-          "Fluid Motion Control"
-        ],
+        images: ["/assets/items/DollyPlatformTracks.jpg"],
+        description: "Professional camera dolly system with precision tracks...",
+        specifications: ["Camera Dolly System", "Precision Tracks", "Smooth Camera Movement", "Robust Platform", "Fluid Motion Control"],
         category: "camera-dolly"
       },
       "wheels-slider": {
         title: "Wheels Slider Tripod",
         image: "/assets/items/heavyDutyDolly.png",
-        images: [
-          "/assets/items/heavyDutyDolly.png",
-        ],
-        description: "Versatile wheeled tripod dolly system that combines the stability of a tripod with the mobility of a dolly. Featuring smooth-rolling wheels and adjustable positioning, this system enables dynamic camera movements while maintaining stable support for your camera equipment during productions.",
-        specifications: [
-          "Wheeled Tripod Dolly",
-          "Smooth-Rolling Wheels",
-          "Adjustable Positioning",
-          "Dynamic Camera Movements",
-          "Stable Support"
-        ],
+        images: ["/assets/items/heavyDutyDolly.png"],
+        description: "Versatile wheeled tripod dolly system...",
+        specifications: ["Wheeled Tripod Dolly", "Smooth-Rolling Wheels", "Adjustable Positioning", "Dynamic Camera Movements", "Stable Support"],
         category: "camera-dolly"
       }
     };
@@ -522,7 +340,7 @@ const Information = () => {
         // Combine ALL items into one object
         const allItems = {};
         
-        // Add predefined items first (mark them as predefined)
+        // Add predefined items first
         predefinedItems.forEach(item => {
           if (item.id) {
             allItems[item.id] = {
@@ -533,7 +351,7 @@ const Information = () => {
           }
         });
         
-        // Add user-added items from Firebase (override predefined if same ID)
+        // Add user-added items
         userAddedItems.forEach(item => {
           if (item.id) {
             allItems[item.id] = {
@@ -544,10 +362,9 @@ const Information = () => {
           }
         });
         
-        // Merge with productInfo from localStorage for descriptions and specifications
+        // Merge with productInfo from localStorage
         Object.keys(productInfoFromStorage).forEach(itemId => {
           if (allItems[itemId]) {
-            // Merge productInfo data with item data
             allItems[itemId] = {
               ...allItems[itemId],
               title: productInfoFromStorage[itemId].title || allItems[itemId].name,
@@ -557,7 +374,6 @@ const Information = () => {
               category: productInfoFromStorage[itemId].category || allItems[itemId].category
             };
           } else {
-            // Item exists in productInfo but not in inventory (shouldn't happen)
             allItems[itemId] = {
               id: itemId,
               ...productInfoFromStorage[itemId],
@@ -580,7 +396,6 @@ const Information = () => {
               images: predefinedProductInfo[itemId].images || allItems[itemId].images || []
             };
           } else {
-            // Item only exists in predefinedProductInfo
             allItems[itemId] = {
               id: itemId,
               ...predefinedProductInfo[itemId],
@@ -613,13 +428,9 @@ const Information = () => {
         allProductsRef.current = allItems;
         
         console.log('🎉 TOTAL products loaded:', Object.keys(allItems).length, 'items');
-        console.log('📊 Breakdown:');
-        console.log('- Predefined items:', Object.values(allItems).filter(item => item.isPredefined).length);
-        console.log('- User-added items:', Object.values(allItems).filter(item => !item.isPredefined && !item.isPackage).length);
-        console.log('- Packages:', Object.values(allItems).filter(item => item.isPackage).length);
         
         setIsLoading(false);
-        setForceUpdate(prev => prev + 1); // Force re-render
+        setForceUpdate(prev => prev + 1);
         
       } catch (error) {
         console.error('❌ Error loading all products:', error);
@@ -642,7 +453,7 @@ const Information = () => {
     };
   }, []);
 
-  // Check package availability (same as in packages.js)
+  // Check package availability
   const getPackageAvailability = useCallback((pkg) => {
     const unavailableItems = pkg.items.filter(item => 
       !isItemAvailable(item.id, item.quantity)
@@ -653,7 +464,7 @@ const Information = () => {
     };
   }, [isItemAvailable]);
 
-  // UPDATED: Direct proceed to schedule function for ℹ icon view
+  // Proceed to schedule function for packages
   const handleProceedToSchedule = () => {
     const allProducts = allProductsRef.current;
     const pkg = allProducts[activePackage]?.packageData;
@@ -667,32 +478,91 @@ const Information = () => {
       return;
     }
 
-    // Check if user is logged in - same as RentItems.js
     if (!user) {
       showMessage("Please log in to schedule a package.");
       navigate('/login-register');
       return;
     }
 
-    // Save package to localStorage
     localStorage.setItem("selectedPackage", JSON.stringify(pkg));
-    localStorage.removeItem("selectedItems"); // Clear any individual items
+    localStorage.removeItem("selectedItems");
 
-    // Check verification status - UPDATED: Use isVerified from AuthContext
     if (!isVerified) {
-      // Show verification modal
       setShowVerificationModal(true);
       return;
     }
 
-    // If verified, proceed to schedule
-    navigate("/rent-schedule");
+    navigate("/rent-schedule?type=package");
   };
 
-  // UPDATED: Verification modal handlers - same as RentItems.js
+  // Handle clicking on product images within packages
+  const handleProductClick = (productId, packageId) => {
+    setReturnToPackage(packageId);
+    setIsFromPackage(true); // ✅ NEW: Set flag that we're viewing an item from a package
+    navigate(`/information?item=${productId}&fromPackage=${packageId}`);
+  };
+
+  // Get back path based on where user came from
+  const getBackPath = () => {
+    if (activePackage) {
+      return '/packages';
+    }
+    
+    if (returnToPackage) {
+      return `/information?package=${returnToPackage}`;
+    }
+    
+    const params = new URLSearchParams(location.search);
+    const fromPackage = params.get('fromPackage');
+    if (fromPackage) {
+      return `/information?package=${fromPackage}`;
+    }
+    
+    return '/rent-items';
+  };
+
+  // Get back button text
+  const getBackButtonText = () => {
+    if (activePackage) {
+      return '← Back to Packages';
+    }
+    
+    if (returnToPackage || isFromPackage) {
+      return '← Back to Package';
+    }
+    
+    const params = new URLSearchParams(location.search);
+    const fromPackage = params.get('fromPackage');
+    if (fromPackage) {
+      return '← Back to Package';
+    }
+    
+    return '← Back to Rent Items';
+  };
+
+  // ✅ NEW: Check if Add to Cart button should be shown
+  const shouldShowAddToCart = () => {
+    // Don't show if it's a package
+    if (currentProduct?.isPackage) return false;
+    
+    // Don't show if user came from a package
+    if (isFromPackage) return false;
+    
+    // Don't show if URL has fromPackage parameter
+    const params = new URLSearchParams(location.search);
+    const fromPackage = params.get('fromPackage');
+    if (fromPackage) return false;
+    
+    // Don't show if returnToPackage is set
+    if (returnToPackage) return false;
+    
+    return true;
+  };
+
+  // Verification modal handlers
   const handleStartVerification = () => {
     setShowVerificationModal(false);
-    navigate("/user-dashboard"); // Changed to match RentItems.js
+    navigate("/user-dashboard");
   };
 
   const handleCloseVerificationModal = () => {
@@ -700,40 +570,25 @@ const Information = () => {
   };
 
   // ==============================================
-  // UPDATED: Get current product with real-time data
+  // Get current product with real-time data
   // ==============================================
   const getCurrentProductData = useCallback(() => {
     if (!activeProduct && !activePackage) return null;
     
     const itemId = activeProduct || activePackage;
-    console.log('🔍 Getting product data for:', itemId);
-    
-    // Get all items from AppContext
     const allItems = getAllRentalItems ? getAllRentalItems() : [];
     const realTimeProduct = allItems.find(item => item.id === itemId);
-    
-    if (realTimeProduct) {
-      console.log('✅ Found real-time product in AppContext:', {
-        name: realTimeProduct.name,
-        price: realTimeProduct.price,
-        available: realTimeProduct.availableQuantity,
-        reserved: realTimeProduct.reservedQuantity
-      });
-    } else {
-      console.log('ℹ️ No real-time data in AppContext for:', itemId);
-    }
     
     return realTimeProduct;
   }, [activeProduct, activePackage, getAllRentalItems]);
 
   // ==============================================
-  // UPDATED: Get current product - checks ALL sources
+  // Get current product - checks ALL sources
   // ==============================================
   const currentProduct = React.useMemo(() => {
     const itemId = activeProduct || activePackage;
     if (!itemId) return null;
     
-    // Get from our combined products ref
     const baseProduct = allProductsRef.current[itemId];
     if (!baseProduct) return null;
     
@@ -749,7 +604,6 @@ const Information = () => {
           isAvailable: availability.isAvailable,
           unavailableItems: availability.unavailableItems,
           packageData: pkg,
-          // CRITICAL: Ensure specifications exist
           specifications: baseProduct.specifications || pkg.displayItems || []
         };
       }
@@ -766,66 +620,37 @@ const Information = () => {
       combinedProduct.available = realTimeProduct.availableQuantity || 0;
       combinedProduct.reserved = realTimeProduct.reservedQuantity || 0;
     } else {
-      // Fallback prices
       const predefinedPrices = {
-        "sachtler-tripod": "₱3,500/day",
-        "cartoni-tripod": "₱3,500/day",
-        "eimage-tripod": "₱2,500/day",
-        "pmw-200": "₱5,000/day",
-        "sony-pmw-350k": "₱7,000/day",
-        "panasonic-hpx3100": "₱8,000/day",
-        "saramonic-comset": "₱3,000/day",
-        "lumantek-switcher": "₱4,000/day",
-        "sony-mcx-500": "₱4,500/day",
-        "blackmagic-atem": "₱4,500/day",
-        "behringer-mixer": "₱1,500/day",
-        "xtuga-mixer": "₱1,200/day",
-        "atem-monitor": "₱2,000/day",
-        "lilliput-monitor": "₱1,800/day",
-        "tvlogic-monitor": "₱2,200/day",
-        "accsoon-transmitter": "₱2,500/day",
-        "hollyland-transmitter": "₱3,000/day",
-        "dolly-platform": "₱5,000/day",
-        "wheels-slider": "₱3,500/day"
+        "sachtler-tripod": "₱3,500/day", "cartoni-tripod": "₱3,500/day", "eimage-tripod": "₱2,500/day",
+        "pmw-200": "₱5,000/day", "sony-pmw-350k": "₱7,000/day", "panasonic-hpx3100": "₱8,000/day",
+        "saramonic-comset": "₱3,000/day", "lumantek-switcher": "₱4,000/day", "sony-mcx-500": "₱4,500/day",
+        "blackmagic-atem": "₱4,500/day", "behringer-mixer": "₱1,500/day", "xtuga-mixer": "₱1,200/day",
+        "atem-monitor": "₱2,000/day", "lilliput-monitor": "₱1,800/day", "tvlogic-monitor": "₱2,200/day",
+        "accsoon-transmitter": "₱2,500/day", "hollyland-transmitter": "₱3,000/day",
+        "dolly-platform": "₱5,000/day", "wheels-slider": "₱3,500/day"
       };
       combinedProduct.price = predefinedPrices[activeProduct] || 'Price on request';
     }
     
-    // CRITICAL: Ensure specifications are always an array
     if (!combinedProduct.specifications || !Array.isArray(combinedProduct.specifications)) {
       combinedProduct.specifications = [];
     }
     
-    // DEBUG: Log product info
-    console.log('📋 Current Product:', {
-      id: combinedProduct.id,
-      title: combinedProduct.title,
-      source: combinedProduct.source,
-      hasSpecifications: !!combinedProduct.specifications,
-      specificationsCount: combinedProduct.specifications?.length || 0,
-      specifications: combinedProduct.specifications
-    });
-    
     return combinedProduct;
   }, [activeProduct, activePackage, getCurrentProductData, getAvailableForRent, getPackageAvailability, forceUpdate]);
 
-  // ==============================================
-  // NEW FUNCTION: Get specifications - GUARANTEED TO WORK
-  // ==============================================
+  // Get specifications
   const displaySpecifications = React.useMemo(() => {
     if (!currentProduct) return [];
     
-    // For packages, use displayItems
     if (currentProduct.isPackage && currentProduct.displayItems) {
       return currentProduct.displayItems;
     }
     
-    // For individual items, check specifications
     if (currentProduct.specifications && Array.isArray(currentProduct.specifications)) {
       return currentProduct.specifications.filter(spec => spec && spec.trim() !== '');
     }
     
-    // Last resort: check in allProductsRef
     const allProducts = allProductsRef.current;
     const itemId = activeProduct || activePackage;
     const itemInRef = allProducts[itemId];
@@ -842,13 +667,30 @@ const Information = () => {
     const params = new URLSearchParams(location.search);
     const itemId = params.get("item");
     const packageId = params.get("package");
+    const fromPackage = params.get("fromPackage");
     
     if (itemId) {
       setActiveProduct(itemId);
       setActivePackage('');
+      
+      if (fromPackage) {
+        setReturnToPackage(fromPackage);
+        setIsFromPackage(true); // ✅ NEW: Set flag
+      } else {
+        const storedReturn = sessionStorage.getItem('returnToPackage');
+        if (storedReturn) {
+          setReturnToPackage(storedReturn);
+          setIsFromPackage(true);
+          sessionStorage.removeItem('returnToPackage');
+        } else {
+          setIsFromPackage(false);
+        }
+      }
     } else if (packageId) {
       setActivePackage(packageId);
       setActiveProduct('');
+      setReturnToPackage(null);
+      setIsFromPackage(false);
     }
     
     setCurrentImageIndex(0);
@@ -862,7 +704,6 @@ const Information = () => {
     const allProducts = allProductsRef.current;
     
     if (currentProduct.items) {
-      // For packages
       currentProduct.items.forEach(item => {
         const fullProduct = allProducts[item.id];
         images.push({
@@ -871,35 +712,19 @@ const Information = () => {
         });
       });
     } else if (currentProduct.images && currentProduct.images.length > 0) {
-      // Single products with multiple images
       currentProduct.images.forEach(img => {
-        images.push({
-          src: img,
-          alt: currentProduct.title
-        });
+        images.push({ src: img, alt: currentProduct.title });
       });
     } else if (currentProduct.image) {
-      // Single product with single image
-      images.push({
-        src: currentProduct.image,
-        alt: currentProduct.title
-      });
+      images.push({ src: currentProduct.image, alt: currentProduct.title });
     } else {
-      images.push({
-        src: '/assets/items/default.png',
-        alt: currentProduct.title
-      });
+      images.push({ src: '/assets/items/default.png', alt: currentProduct.title });
     }
     
     setProductImages(images);
   }, [currentProduct]);
 
-  // Function to handle clicking on product images within packages
-  const handleProductClick = (productId) => {
-    navigate(`/information?item=${productId}`);
-  };
-
-  // Image carousel navigation functions
+  // Image carousel navigation
   const nextImage = () => {
     setCurrentImageIndex((prevIndex) => 
       prevIndex === productImages.length - 1 ? 0 : prevIndex + 1
@@ -912,15 +737,7 @@ const Information = () => {
     );
   };
 
-  const getBackPath = () => {
-    if (activePackage) return '/packages';
-    if (window.location.search.includes('package')) return '/packages';
-    return '/rent-items';
-  };
-
-  // ==============================================
-  // UPDATED: Add to Cart function
-  // ==============================================
+  // Add to Cart function
   const handleAddToCart = () => {
     if (!currentProduct || !user) {
       showMessage("Please log in to add items to your cart.");
@@ -1141,7 +958,7 @@ const Information = () => {
               <div className="product-details-column">
                 <h1 className="product-title">{currentProduct.title}</h1>
                 
-                {/* Price Section - SYNCED WITH APPCONTEXT */}
+                {/* Price Section */}
                 <div className="price-section">
                   <h2 className="product-price">{currentProduct.price || 'Price on request'}</h2>
                   
@@ -1149,48 +966,27 @@ const Information = () => {
                   {currentProduct.isPackage && (
                     <div className="stock-info-section">
                       <span className={`stock-status ${currentProduct.isAvailable ? 'in-stock' : 'out-of-stock'}`}>
-                        {currentProduct.isAvailable 
-                          ? `✓ Package Available` 
-                          : '✗ Package Unavailable'}
+                        {currentProduct.isAvailable ? `✓ Package Available` : '✗ Package Unavailable'}
                       </span>
-                      {currentProduct.unavailableItems && currentProduct.unavailableItems.length > 0 && (
-                        <div className="unavailable-items">
-                          <strong>Unavailable items:</strong>
-                          <ul>
-                            {currentProduct.unavailableItems.map((item, index) => (
-                              <li key={index}>{item.name}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
                     </div>
                   )}
                   
-                  {/* For individual items */}
-                  {!currentProduct.isPackage && currentProduct.stock !== undefined && (
+                  {/* For individual items - only show stock info if NOT from package */}
+                  {!currentProduct.isPackage && !isFromPackage && currentProduct.stock !== undefined && (
                     <div className="stock-info-section">
                       <span className={`stock-status ${currentProduct.stock > 0 ? 'in-stock' : 'out-of-stock'}`}>
-                        {currentProduct.stock > 0 
-                          ? `✓ In Stock (${currentProduct.stock} available)` 
-                          : '✗ Out of Stock'}
+                        {currentProduct.stock > 0 ? `✓ In Stock (${currentProduct.stock} available)` : '✗ Out of Stock'}
                       </span>
-                      {currentProduct.reserved > 0 && (
-                        <span className="reserved-info">
-                          ({currentProduct.reserved} reserved for bookings)
-                        </span>
-                      )}
-                      {currentProduct.available > 0 && currentProduct.reserved > 0 && (
-                        <span className="total-info">
-                          Total: {currentProduct.available} units ({currentProduct.available - currentProduct.reserved} available for rent)
-                        </span>
-                      )}
                     </div>
                   )}
                   
-                  {!user && (
-                    <p className="login-reminder-small">
-                      Please log in to add this item to your cart.
-                    </p>
+                  {/* For items from package - show notice */}
+                  {isFromPackage && !currentProduct.isPackage && (
+                    <div className="stock-info-section">
+                      <span className="package-item-notice">
+                        ℹ️ This item is part of a package. Please select the package to rent.
+                      </span>
+                    </div>
                   )}
                 </div>
 
@@ -1200,9 +996,7 @@ const Information = () => {
                   <p className="product-description">{currentProduct.description}</p>
                 </div>
 
-                {/* ============================================== */}
-                {/* SPECIFICATIONS SECTION - NOW WORKING FOR ALL ITEMS */}
-                {/* ============================================== */}
+                {/* Specifications Section */}
                 {displaySpecifications.length > 0 && (
                   <div className="specifications-section">
                     <h3>{currentProduct.isPackage ? 'Package Includes' : 'Specifications'}</h3>
@@ -1226,7 +1020,7 @@ const Information = () => {
                           <div 
                             key={index} 
                             className="package-item-card"
-                            onClick={() => handleProductClick(item.id)}
+                            onClick={() => handleProductClick(item.id, currentProduct.id)}
                           >
                             <img 
                               src={fullProduct?.image || item.image} 
@@ -1243,10 +1037,9 @@ const Information = () => {
                   </div>
                 )}
 
-                {/* Action Buttons - UPDATED: Proceed to Schedule for packages */}
+                {/* Action Buttons */}
                 <div className="action-buttons">
                   {currentProduct.isPackage ? (
-                    // For packages: Proceed to Schedule button (same style as select package)
                     <button 
                       onClick={handleProceedToSchedule}
                       disabled={!user || !currentProduct.isAvailable}
@@ -1256,25 +1049,28 @@ const Information = () => {
                        (!currentProduct.isAvailable ? 'Package Unavailable' : 'Proceed to Schedule')}
                     </button>
                   ) : (
-                    // For individual items - keep Add to Cart
-                    <button 
-                      className="add-to-cart-btn" 
-                      onClick={handleAddToCart}
-                      disabled={!user || (currentProduct.stock !== undefined && currentProduct.stock <= 0)}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#ffffff">
-                        <path d="M280-80q-33 0-56.5-23.5T200-160q0-33 23.5-56.5T280-240q33 0 56.5 23.5T360-160q0 33-23.5 56.5T280-80Zm400 0q-33 0-56.5-23.5T600-160q0-33 23.5-56.5T680-240q33 0 56.5 23.5T760-160q0 33-23.5 56.5T680-80ZM246-720l96 200h280l110-200H246Zm-38-80h590q23 0 35 20.5t1 41.5L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40v-80h130l38 80Zm134 280h280-280Z"/>
-                      </svg>
-                      {!user ? 'Login to Add to Cart' : 
-                       (currentProduct.stock <= 0 ? 'Out of Stock' : 'Add to Cart')}
-                    </button>
+                    // ✅ FIXED: Only show Add to Cart button if NOT from package
+                    shouldShowAddToCart() && (
+                      <button 
+                        className="add-to-cart-btn" 
+                        onClick={handleAddToCart}
+                        disabled={!user || (currentProduct.stock !== undefined && currentProduct.stock <= 0)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#ffffff">
+                          <path d="M280-80q-33 0-56.5-23.5T200-160q0-33 23.5-56.5T280-240q33 0 56.5 23.5T360-160q0 33-23.5 56.5T280-80Zm400 0q-33 0-56.5-23.5T600-160q0-33 23.5-56.5T680-240q33 0 56.5 23.5T760-160q0 33-23.5 56.5T680-80ZM246-720l96 200h280l110-200H246Zm-38-80h590q23 0 35 20.5t1 41.5L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40v-80h130l38 80Zm134 280h280-280Z"/>
+                        </svg>
+                        {!user ? 'Login to Add to Cart' : 
+                         (currentProduct.stock <= 0 ? 'Out of Stock' : 'Add to Cart')}
+                      </button>
+                    )
                   )}
                   
+                  {/* Dynamic back button */}
                   <button 
                     onClick={() => navigate(getBackPath())}
                     className="back-btn"
                   >
-                    ← Back to {activePackage ? 'Packages' : 'Rent Items'}
+                    {getBackButtonText()}
                   </button>
                 </div>
               </div>
@@ -1293,7 +1089,7 @@ const Information = () => {
         )}
       </section>
 
-      {/* ADDED: Verification Required Modal */}
+      {/* Verification Required Modal */}
       <div 
         className="policy-modal" 
         style={{ display: showVerificationModal ? 'flex' : 'none' }}
