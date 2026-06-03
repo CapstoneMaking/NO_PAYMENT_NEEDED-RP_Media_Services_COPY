@@ -171,35 +171,35 @@ const Packages = () => {
   };
 
   // UPDATED: Handle verification before proceeding - same as RentItems.js
-  const proceedToSchedule = () => {
-    if (!selectedPackage) {
-      setMessage("Please select a package first.");
-      return;
-    }
+  // In Packages.js - Update the proceedToSchedule function
+const proceedToSchedule = () => {
+  if (!selectedPackage) {
+    setMessage("Please select a package first.");
+    return;
+  }
 
-    const availability = getPackageAvailability(selectedPackage);
-    if (!availability.isAvailable) {
-      setMessage("Selected package is no longer available. Please choose another package.");
-      return;
-    }
+  const availability = getPackageAvailability(selectedPackage);
+  if (!availability.isAvailable) {
+    setMessage("Selected package is no longer available. Please choose another package.");
+    return;
+  }
 
-    // Check if user is logged in - same as RentItems.js
-    if (!user) {
-      showMessage("Please log in to schedule a package.");
-      navigate('/login-register');
-      return;
-    }
+  // Check if user is logged in
+  if (!user) {
+    showMessage("Please log in to schedule a package.");
+    navigate('/login-register');
+    return;
+  }
 
-    // Check verification status - same as RentItems.js
-    if (!isVerified) {
-      // Show verification modal
-      setShowVerificationModal(true);
-      return;
-    }
+  // Check verification status
+  if (!isVerified) {
+    setShowVerificationModal(true);
+    return;
+  }
 
-    // If verified, proceed to schedule
-    navigate("/rent-schedule");
-  };
+  // ✅ Pass type parameter to indicate this is a package booking
+  navigate("/rent-schedule?type=package");
+};
 
   // Verification modal handlers - same as RentItems.js
   const handleStartVerification = () => {

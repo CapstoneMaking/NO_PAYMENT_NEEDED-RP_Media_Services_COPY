@@ -1,5 +1,6 @@
+// RentSchedule.js - FIXED VERSION with session tracking
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // Add useLocation
 import { collection, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../utils/firebase';
@@ -64,10 +65,12 @@ const RentSchedule = () => {
   const [bookedDates, setBookedDates] = useState({});
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
-  const [selectionMode, setSelectionMode] = useState('start'); // 'start' or 'end'
+  const [selectionMode, setSelectionMode] = useState('start');
   const [hoverDate, setHoverDate] = useState('');
+  const [bookingType, setBookingType] = useState(null); // 'package' or 'items'
 
   const navigate = useNavigate();
+  const location = useLocation(); // Add this to check URL params
   const { user: authUser, isadmin } = useAuth();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const { user, isAdmin } = useAuth();
@@ -142,6 +145,36 @@ const RentSchedule = () => {
     }
   }, [startDate, endDate, authUser]);
 
+  // ✅ NEW: Determine booking type when component mounts and when coming from navigation
+  useEffect(() => {
+    // Check URL params first (most reliable)
+    const params = new URLSearchParams(location.search);
+    const typeFromUrl = params.get('type');
+    
+    if (typeFromUrl === 'package') {
+      setBookingType('package');
+      console.log('📦 Booking type set to: PACKAGE (from URL)');
+    } else if (typeFromUrl === 'items') {
+      setBookingType('items');
+      console.log('📦 Booking type set to: ITEMS (from URL)');
+    } else {
+      // Fallback: Check sessionStorage for recent selection (clears on tab close)
+      const recentSelection = sessionStorage.getItem('currentBookingType');
+      
+      if (recentSelection === 'package') {
+        setBookingType('package');
+        console.log('📦 Booking type set to: PACKAGE (from session)');
+      } else if (recentSelection === 'items') {
+        setBookingType('items');
+        console.log('📦 Booking type set to: ITEMS (from session)');
+      } else {
+        // Default to items if no type is specified
+        setBookingType('items');
+        console.log('📦 Booking type set to: ITEMS (default)');
+      }
+    }
+  }, [location.search]);
+
   // Handle date click
   const handleDateClick = (dateStr) => {
     if (!authUser) {
@@ -159,10 +192,9 @@ const RentSchedule = () => {
 
     if (selectionMode === 'start') {
       setStartDate(dateStr);
-      setEndDate(''); // Reset end date when selecting new start
+      setEndDate('');
       setSelectionMode('end');
     } else {
-      // If end date is before start date, swap them
       const endDateObj = new Date(dateStr);
       const startDateObj = new Date(startDate);
 
@@ -187,19 +219,16 @@ const RentSchedule = () => {
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const calendarDays = [];
 
-    // Add day names
     dayNames.forEach(day => {
       calendarDays.push(
         <div key={`day-${day}`} className="schedule-day-name">{day}</div>
       );
     });
 
-    // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayOfWeek; i++) {
       calendarDays.push(<div key={`empty-${i}`} className="schedule-empty-day"></div>);
     }
 
-    // Add days of the month
     for (let i = 1; i <= daysInMonth; i++) {
       const dateStr = `${calendarYear}-${pad(calendarMonth + 1)}-${pad(i)}`;
       const dateObj = new Date(dateStr);
@@ -267,7 +296,7 @@ const RentSchedule = () => {
     }
   };
 
-  // Handle next button click - UPDATED to not require items
+  // ✅ FIXED: Handle next button click based on bookingType state
   const handleNext = async () => {
     if (!authUser) {
       setMessage("You must log in before making a booking.");
@@ -303,14 +332,20 @@ const RentSchedule = () => {
       }
     }
 
-    // Save dates to localStorage and proceed to items page
+    // Save dates to localStorage
     localStorage.setItem("bookingFormData", JSON.stringify({ startDate, endDate }));
-
-    // Log what we're saving
     console.log('Saving booking data:', { startDate, endDate });
 
-    // Navigate to items page - user will select items there
-    navigate("/rent-items");
+    // ✅ Navigate based on bookingType state (not localStorage)
+    if (bookingType === 'package') {
+      // User is booking a package - go directly to confirmation
+      console.log('📦 Package booking - going to confirmation page');
+      navigate("/Confirmation");
+    } else {
+      // User is booking individual items - go to rent items page
+      console.log('📦 Items booking - going to rent items page');
+      navigate("/rent-items");
+    }
   };
 
   // Navigation functions for calendar
@@ -339,45 +374,19 @@ const RentSchedule = () => {
     setSelectionMode('start');
     setMessage('Selection cleared. Click on calendar to select dates.');
 
-    // Also clear from localStorage
     if (authUser) {
       const userScheduleKey = `rentalSchedule_${authUser.uid}`;
       localStorage.removeItem(userScheduleKey);
-    }
-  };
-
-  // Clear saved schedule for user
-  const clearSavedSchedule = () => {
-    if (authUser) {
-      const userScheduleKey = `rentalSchedule_${authUser.uid}`;
-      localStorage.removeItem(userScheduleKey);
-      setMessage('Your saved schedule has been cleared.');
-    }
-    resetSelection();
-  };
-
-  // Go back to items/packages selection
-  const goBackToSelection = () => {
-    const items = JSON.parse(localStorage.getItem("selectedItems")) || [];
-    const pkg = JSON.parse(localStorage.getItem("selectedPackage"));
-
-    if (pkg) {
-      navigate('/packages');
-    } else {
-      navigate('/rent-items');
     }
   };
 
   useEffect(() => {
-    // Set initial calendar values
     const todayDate = new Date();
     setCalendarYear(todayDate.getFullYear());
     setCalendarMonth(todayDate.getMonth());
 
-    // Load bookings
     loadBookings();
 
-    // Set up auth state listener
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
     });
@@ -389,10 +398,14 @@ const RentSchedule = () => {
     "July", "August", "September", "October", "November", "December"
   ];
 
-  // Calculate rental period info
-  const rentalDays = startDate && endDate
-    ? Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1
-    : 0;
+  // ✅ Get button text based on bookingType state
+  const getButtonText = () => {
+    if (bookingType === 'package') {
+      return "Continue to Confirmation";
+    } else {
+      return "Continue to Items";
+    }
+  };
 
   return (
     <>
@@ -407,7 +420,6 @@ const RentSchedule = () => {
           <li><Link to="/photobooth" onClick={hideSidebar}>Photobooth</Link></li>
           <li><Link to="/about" onClick={hideSidebar}>About us</Link></li>
 
-          {/* Conditional Dashboard Links */}
           {user ? (
             isAdmin ? (
               <li><Link to="/AdminDashboard" onClick={hideSidebar}>Admin Dashboard</Link></li>
@@ -427,7 +439,6 @@ const RentSchedule = () => {
           <li className="hideOnMobile"><Link to="/photobooth">Photobooth</Link></li>
           <li className="hideOnMobile"><Link to="/about">About Us</Link></li>
 
-          {/* Conditional Main Nav Icons */}
           {user ? (
             isAdmin ? (
               <li className="hideOnMobile">
@@ -539,7 +550,7 @@ const RentSchedule = () => {
               onClick={handleNext}
               disabled={!startDate || !endDate}
             >
-              Continue to Items
+              {getButtonText()}
             </button>
           </div>
 
