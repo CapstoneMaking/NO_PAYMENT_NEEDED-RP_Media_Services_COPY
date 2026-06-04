@@ -5,22 +5,18 @@
 .rent-schedule{
   background-image: url('/public/assets/bgHomepage3.jpg');
   background-size: cover;
-  background-position: center;
-  background-attachment: scroll;
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 40px;
+  font-weight: 900px;
+  margin-bottom: 50px;
   text-align: center;
+  padding: 58px;
+  width: 100vw !important;
   color: rgb(255, 255, 255);
-  padding: 2rem 2rem;
-  text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
-  margin-bottom: 1rem;
 }
 .schedule-title{
   color: rgb(255, 255, 255);
   margin: 0;
   font-family: 'Inter', sans-serif;
-  font-size: 2rem;
-  font-weight: 600;
 }
 
 /* Modern Schedule Container - Specific to schedule page */
